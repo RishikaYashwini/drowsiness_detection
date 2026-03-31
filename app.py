@@ -57,6 +57,9 @@ def generate_frames():
     )
 
     cap = cv2.VideoCapture(0)
+    if not cap.isOpened():
+        print("Error: Could not open webcam.")
+        return
     frame_counter = 0
     timestamp_ms = 0
 
@@ -111,4 +114,6 @@ def video_feed():
 
 
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    # Get port from environment variable, or default to 5000
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port)
