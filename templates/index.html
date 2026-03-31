@@ -2,76 +2,61 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Drowsiness Detection</title>
     <style>
-        body {
-            font-family: Arial, sans-serif;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            margin: 0;
-            background-color: #1a1a2e;
-            color: #fff;
-        }
-        h1 {
-            margin-bottom: 20px;
-        }
-        img {
-            border: 3px solid #e94560;
-            border-radius: 8px;
-            max-width: 90%;
-        }
-        /* ADDED INSTRUCTION BOX STYLING */
-        #audio-btn { 
-            margin-top: 20px;
-            padding: 15px; 
-            background: #e94560; 
-            border: none; 
-            color: white; 
-            border-radius: 5px; 
-            cursor: pointer; 
-            font-weight: bold;
-        }
+        body { font-family: Arial; display: flex; flex-direction: column; align-items: center; background: #1a1a2e; color: white; }
+        video { border: 3px solid #e94560; border-radius: 8px; width: 80%; transform: scaleX(-1); }
+        #status { margin: 20px; padding: 15px; background: #16213e; border: 1px solid #e94560; }
+        .danger { background: red !important; }
     </style>
 </head>
 <body>
-    <h1>Drowsiness Detection System</h1>
-    <img src="{{ url_for('video_feed') }}" alt="Video Feed">
-
-    <button id="audio-btn">CLICK HERE TO ENABLE AUDIO</button>
-
-    <audio id="alertSound" src="{{ url_for('static', filename='alert.mp3') }}" loop></audio>
+    <h1>Drowsiness Detection</h1>
+    <video id="webcam" autoplay playsinline></video>
+    <div id="status">Click to Start Detection</div>
+    <audio id="beep" src="{{ url_for('static', filename='alert.mp3') }}" loop></audio>
 
     <script>
-        const alertSound = document.getElementById('alertSound');
-        const audioBtn = document.getElementById('audio-btn');
-        let enabled = false;
+        const video = document.getElementById('webcam');
+        const status = document.getElementById('status');
+        const beep = document.getElementById('beep');
+        const canvas = document.createElement('canvas');
+        let active = false;
 
-        audioBtn.onclick = () => {
-            enabled = true;
-            audioBtn.innerText = "MONITORING ACTIVE";
-            audioBtn.style.background = "#4ecca3";
-        };
+        // Get user camera
+        navigator.mediaDevices.getUserMedia({ video: true }).then(stream => {
+            video.srcObject = stream;
+        });
 
-        async function check() {
-            if (!enabled) return;
-            try {
-                const res = await fetch('/status');
-                const data = await res.json();
-                if (data.drowsy === true) {
-                    if (alertSound.paused) {
-                        alertSound.play(); // Beeps ONLY when backend says true
-                    }
-                } else {
-                    alertSound.pause();
-                    alertSound.currentTime = 0; // Stops immediately when eyes open
-                }
-            } catch (e) { console.log("Connection error"); }
+        window.onclick = () => { active = true; status.innerText = "Monitoring..."; };
+
+        async function sendFrame() {
+            if (!active) return;
+            
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            canvas.getContext('2d').drawImage(video, 0, 0);
+            const dataUrl = canvas.toDataURL('image/jpeg', 0.5);
+
+            const res = await fetch('/process_frame', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ image: dataUrl })
+            });
+            const data = await res.json();
+
+            if (data.drowsy) {
+                status.innerText = "WARNING!";
+                status.classList.add('danger');
+                if (beep.paused) beep.play();
+            } else {
+                status.innerText = "Monitoring...";
+                status.classList.remove('danger');
+                beep.pause();
+            }
         }
-        setInterval(check, 200);
+
+        setInterval(sendFrame, 300);
     </script>
 </body>
 </html>
