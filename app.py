@@ -3,7 +3,7 @@ import cv2
 import mediapipe as mp
 import numpy as np
 from scipy.spatial import distance
-from flask import Flask, render_template, Response, jsonify
+from flask import Flask, render_template, Response, jsonify, request
 import base64
 
 app = Flask(__name__)
