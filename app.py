@@ -4,7 +4,6 @@ import mediapipe as mp
 import numpy as np
 from scipy.spatial import distance
 from flask import Flask, render_template, Response, jsonify
-import winsound
 
 app = Flask(__name__)
 
